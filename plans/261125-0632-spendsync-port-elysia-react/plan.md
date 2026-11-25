@@ -1,7 +1,7 @@
 ---
 title: "Port SpendSync to Elysia + Vite React (Bank Sync)"
 description: "Rebuild the SpendSync Laravel/Livewire app at feature parity as Bank Sync on Bun, Elysia 1.4, Drizzle + SQLite and a React 19 SPA built with Vite 8."
-status: pending
+status: in-progress
 priority: P1
 effort: 78h
 tags: [feature, backend, frontend, database, auth, port]
@@ -29,7 +29,7 @@ Analysis (source anatomy, dependency matrix, decision matrix, risk score): [xia 
 
 | # | Phase | Status |
 |---|-------|--------|
-| 1 | [Workspace scaffold](./phase-01-workspace-scaffold.md) | Pending |
+| 1 | [Workspace scaffold](./phase-01-workspace-scaffold.md) | Done |
 | 2 | [Database schema and seed](./phase-02-database-schema.md) | Pending |
 | 3 | [Parsing engine with fixture parity](./phase-03-parsing-engine.md) | Pending |
 | 4 | [Email ingest, DKIM, job queue, scheduler, CLI](./phase-04-mail-sync-queue.md) | Pending |

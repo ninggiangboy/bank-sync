@@ -1,7 +1,7 @@
 ---
 phase: 1
 title: "Workspace scaffold"
-status: pending
+status: done
 priority: P1
 effort: "3h"
 dependencies: []
