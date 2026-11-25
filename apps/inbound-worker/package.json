@@ -1,0 +1,12 @@
+{
+  "name": "@bank-sync/inbound-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261125.1",
+    "typescript": "7.0.2",
+    "wrangler": "4.168.0"
+  }
+}

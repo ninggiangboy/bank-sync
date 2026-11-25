@@ -1,0 +1,25 @@
+{
+  "name": "bank-sync",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --parallel dev:server dev:web",
+    "dev:server": "bun --watch apps/server/src/index.ts",
+    "dev:web": "bun run --filter @bank-sync/web dev",
+    "build": "bun run --filter @bank-sync/web build",
+    "start": "bun apps/server/src/index.ts",
+    "test": "bun test",
+    "typecheck": "bun run --filter '*' typecheck",
+    "lint": "biome check .",
+    "format": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.9",
+    "typescript": "7.0.2"
+  }
+}

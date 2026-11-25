@@ -1,0 +1,32 @@
+{
+  "name": "@bank-sync/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bank-sync/shared": "workspace:*",
+    "@elysiajs/eden": "1.4.9",
+    "@tanstack/react-router": "1.170.46",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@bank-sync/server": "workspace:*",
+    "@tailwindcss/vite": "4.3.5",
+    "@tanstack/router-plugin": "1.169.0",
+    "@types/bun": "1.4.5",
+    "@types/react": "19.3.1",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "tailwindcss": "4.3.5",
+    "typescript": "7.0.2",
+    "vite": "8.3.8"
+  }
+}
