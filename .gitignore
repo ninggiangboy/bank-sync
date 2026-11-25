@@ -12,3 +12,4 @@ storage/
 .tanstack/
 test-results/
 playwright-report/
+.claude/
