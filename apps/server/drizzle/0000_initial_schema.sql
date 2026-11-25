@@ -67,6 +67,22 @@ CREATE TABLE `inbound_receipts` (
 );
 --> statement-breakpoint
 CREATE INDEX `inbound_receipts_received_index` ON `inbound_receipts` (`received_at`);--> statement-breakpoint
+CREATE TABLE `jobs` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`name` text NOT NULL,
+	`payload` text NOT NULL,
+	`unique_key` text,
+	`attempts` integer DEFAULT 0 NOT NULL,
+	`max_attempts` integer DEFAULT 3 NOT NULL,
+	`available_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,
+	`reserved_at` integer,
+	`failed_at` integer,
+	`last_error` text,
+	`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX `jobs_available_index` ON `jobs` (`available_at`);--> statement-breakpoint
+CREATE UNIQUE INDEX `jobs_pending_unique_key` ON `jobs` (`unique_key`) WHERE "reserved_at" is null and "failed_at" is null;--> statement-breakpoint
 CREATE TABLE `raw_emails` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`user_id` text NOT NULL,

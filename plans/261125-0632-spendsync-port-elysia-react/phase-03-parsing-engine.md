@@ -64,3 +64,9 @@ Port the bank email parsing layer to pure TypeScript so that every upstream `.em
 ## Risks
 
 - Highest fidelity risk in the port. A wrong regex silently misparses amounts or direction. Mitigation: do not move on to phase 4 until the fixture test is fully green; never edit an `expected.json` to make a test pass. If a fixture disagrees because of MIME decoding differences, fix `fromEml`, not the parser or the fixture.
+
+## Handover notes (implementation)
+
+- The plan said 28 fixtures; upstream has 20 `.eml` files (each with an `.expected.json`). All 20 pass.
+- mailparser invents a wrapped `text` for HTML-only mail, which defeated balance redaction; `fromEml` keeps `text` only when the raw message has a real `text/plain` part.
+- Dates are plain `Date` instants; `date-parser.ts` converts wall time with `Intl` (no Temporal types in TS 7 lib) and exports `toIsoInZone`. `STORAGE_PATH` (default `storage`) holds `fx-rates.json`.

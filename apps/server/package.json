@@ -13,10 +13,12 @@
   },
   "dependencies": {
     "@bank-sync/shared": "workspace:*",
+    "@elysiajs/cron": "1.4.2",
     "better-auth": "1.7.28",
     "drizzle-orm": "0.45.4",
     "elysia": "1.4.32",
     "entities": "9.0.0",
+    "mailauth": "8.1.0",
     "mailparser": "3.15.0",
     "zod": "4.6.7"
   },

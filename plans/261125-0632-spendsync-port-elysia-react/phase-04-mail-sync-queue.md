@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "Email ingest, DKIM, job queue, scheduler, CLI"
-status: pending
+status: done
 priority: P1
 effort: "9h"
 dependencies: [2, 3]
@@ -88,3 +88,14 @@ Upload .eml/.mbox ─▶ same store path with source=upload, verification=user_u
 - The `jobs` table was left to this phase. Export it from `apps/server/src/db/schema.ts` and run `bun run db:generate`. While nothing is deployed, regenerate `0000_initial_schema` instead of adding `0001`, to keep "one initial migration".
 - Drizzle's `bun:sqlite` `transaction()` is synchronous. An `async` callback commits at its first `await`, and later statements run outside the transaction. Keep worker claims and `storeEmail` callbacks synchronous, and pass `{ behavior: "immediate" }` for read-then-write transactions.
 - Throw `HttpError(status, code)` or `status(code, "error_code")`. Both become `{ error: { code } }`.
+
+## Handover notes (implementation)
+
+- `mailauth` 8.1.0 runs under Bun with an injected resolver; DKIM tests sign fixtures with a generated key. Step 1 (real forwarded emails per bank) still needs the user: until then, whether VCB, CAKE and VPB signatures survive Gmail forwarding is **unverified**, and unsigned or broken mail simply becomes unverified.
+- Not yet verified against Cloudflare: what a throwing Email Worker does, whether Gmail keeps `Message-ID` on forward, Email Routing on a subdomain, and the Gmail filter `.xml` import. The Worker throws on 5xx/network errors and on any non-404 failure.
+- Replay receipts and pending files are keyed `<sha256>-<inboundAddressId>`, so one email forwarded to two users is not dropped as a replay. A failed ingest keeps its pending file for the retry; the 03:00 purge removes leftovers older than a day.
+- `jobs` has an extra `failed_at` column; the pending unique index covers rows where `reserved_at` and `failed_at` are null. The migration `0000_initial_schema` was regenerated.
+- Drizzle's `run()` is typed `void` on `bun:sqlite`; count affected rows with `.returning(...).all().length`.
+- The upstream fixture set has 20 `.eml` files (40 files with their `.expected.json`), not 28.
+- `app.ts` now exports `createApp({ db, files })` and the `App` type; `index.ts` migrates, starts the worker (`WORKER_ENABLED`) and scheduler (`SCHEDULER_ENABLED`). New env: `STORAGE_PATH`.
+- The Worker's sender allow-list is `apps/inbound-worker/src/senders.generated.ts` (`bun run --filter @bank-sync/inbound-worker generate`); a test fails when it drifts from `banks-config.ts`.

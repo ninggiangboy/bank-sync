@@ -16,3 +16,8 @@ export function openDatabase(path: string) {
 }
 
 export type Db = ReturnType<typeof openDatabase>;
+
+/** The transaction handle Drizzle passes to `db.transaction` callbacks. */
+export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+/** Either the database or an open transaction, for functions that work inside both. */
+export type DbOrTx = Db | Tx;

@@ -209,6 +209,36 @@ export const inboundReceipts = sqliteTable(
   (t) => [index("inbound_receipts_received_index").on(t.receivedAt)],
 );
 
+/**
+ * Work queue. A job is pending while `reserved_at` and `failed_at` are null; `unique_key` allows at
+ * most one pending job per key so repeated triggers collapse into one.
+ */
+export const jobs = sqliteTable(
+  "jobs",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    payload: text("payload", { mode: "json" }).notNull(),
+    uniqueKey: text("unique_key"),
+    attempts: integer("attempts").notNull().default(0),
+    maxAttempts: integer("max_attempts").notNull().default(3),
+    availableAt: timestamp("available_at")
+      .notNull()
+      .default(nowMs)
+      .$defaultFn(() => new Date()),
+    reservedAt: timestamp("reserved_at"),
+    failedAt: timestamp("failed_at"),
+    lastError: text("last_error"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("jobs_available_index").on(t.availableAt),
+    uniqueIndex("jobs_pending_unique_key")
+      .on(t.uniqueKey)
+      .where(sql`"reserved_at" is null and "failed_at" is null`),
+  ],
+);
+
 /** Key-value store with expiry, used for rate limits. `expires_at` is epoch milliseconds. */
 export const cache = sqliteTable(
   "cache",

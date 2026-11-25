@@ -8,5 +8,11 @@
     "@cloudflare/workers-types": "5.20261125.1",
     "typescript": "7.0.2",
     "wrangler": "4.168.0"
+  },
+  "scripts": {
+    "generate": "NODE_ENV=development bun scripts/generate-senders.ts",
+    "dev": "bun run generate && wrangler dev",
+    "deploy": "bun run generate && wrangler deploy",
+    "typecheck": "tsc -p tsconfig.json"
   }
 }

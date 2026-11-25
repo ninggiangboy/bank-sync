@@ -1,0 +1,15 @@
+# Cloudflare Email Worker: receives forwarded bank emails from Email Routing and hands them to the
+# Bank Sync server. Deploy with `bunx wrangler deploy`, then route `*@<INBOUND_DOMAIN>` to this
+# Worker in the Cloudflare dashboard (Email > Email Routing > Routing rules > Email Workers).
+name = "bank-sync-inbound"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+
+[vars]
+# Public URL of the server's inbound endpoint.
+INBOUND_URL = "https://bank-sync.example.com/api/inbound/email"
+# Largest message to forward, in bytes. Keep equal to the server's INBOUND_MAX_BYTES.
+INBOUND_MAX_BYTES = "2097152"
+
+# Secret, set with: bunx wrangler secret put INBOUND_WEBHOOK_SECRET
+# It must equal the server's INBOUND_WEBHOOK_SECRET.
