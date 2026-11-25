@@ -82,3 +82,9 @@ Upload .eml/.mbox ─▶ same store path with source=upload, verification=user_u
 
 - Cloudflare's behavior when an Email Worker throws (temporary failure that makes Gmail retry, or permanent bounce). Read the current Email Workers docs and test with the server stopped.
 - Gmail keeps the original `Message-ID` on auto-forward (needed for dedupe between forwarded and uploaded copies). Check on the real samples from step 1.
+
+## Carried over from phases 1–2
+
+- The `jobs` table was left to this phase. Export it from `apps/server/src/db/schema.ts` and run `bun run db:generate`. While nothing is deployed, regenerate `0000_initial_schema` instead of adding `0001`, to keep "one initial migration".
+- Drizzle's `bun:sqlite` `transaction()` is synchronous. An `async` callback commits at its first `await`, and later statements run outside the transaction. Keep worker claims and `storeEmail` callbacks synchronous, and pass `{ behavior: "immediate" }` for read-then-write transactions.
+- Throw `HttpError(status, code)` or `status(code, "error_code")`. Both become `{ error: { code } }`.

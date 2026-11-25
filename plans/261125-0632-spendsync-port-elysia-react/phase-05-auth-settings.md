@@ -49,3 +49,5 @@ Provide the Breeze-equivalent account flows with Better Auth on Elysia, plus pro
 
 - Better Auth API shape changes between minors. Mitigation: pin the version and read its current docs (Elysia integration, Drizzle adapter, `additionalFields`, `deleteUser`) at implementation time.
 - Password policy differs from Laravel defaults. Mitigation: set min length 8 explicitly and test it.
+- Dev origin mismatch. The SPA runs on `http://localhost:5173` and proxies `/api`, but `.env.example` sets `APP_URL=http://localhost:8000`. Better Auth's origin check will reject browser POSTs, and email links will point at a port with no SPA. Set `trustedOrigins` for the Vite origin in development, or make the dev `APP_URL` the Vite origin.
+- Regenerate the auth tables with `NODE_ENV=development bunx --bun auth@<pinned> generate --config apps/server/src/auth/auth.ts --output apps/server/src/db/auth-schema.ts --yes`, then `bun run db:generate`. `--bun` is needed because the config imports `bun:sqlite`.

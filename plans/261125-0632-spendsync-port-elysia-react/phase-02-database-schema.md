@@ -1,7 +1,7 @@
 ---
 phase: 2
 title: "Database schema and seed"
-status: pending
+status: done
 priority: P1
 effort: "4h"
 dependencies: [1]
