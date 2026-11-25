@@ -79,49 +79,55 @@ export const SYSTEM_CATEGORIES: readonly SystemCategory[] = [
  * changes existing rows, so it is safe to run again. When a category is created, users' own
  * categories with the same name and type are merged into it: their transactions (hidden ones
  * included) and rules move to the system row, then the copies are deleted.
- * Returns the number of categories created.
+ * Returns the number of categories created. The transaction takes the write lock up front so a
+ * concurrent writer (the running server) makes it wait instead of failing with SQLITE_BUSY.
  */
 export function seedSystemCategories(db: Db, lines: readonly SystemCategory[] = SYSTEM_CATEGORIES) {
-  return db.transaction((tx) => {
-    let created = 0;
-    const systemId = (name: string, type: CategoryType) =>
-      tx
-        .select({ id: categories.id })
-        .from(categories)
-        .where(and(isNull(categories.userId), eq(categories.name, name), eq(categories.type, type)))
-        .get()?.id;
+  return db.transaction(
+    (tx) => {
+      let created = 0;
+      const systemId = (name: string, type: CategoryType) =>
+        tx
+          .select({ id: categories.id })
+          .from(categories)
+          .where(
+            and(isNull(categories.userId), eq(categories.name, name), eq(categories.type, type)),
+          )
+          .get()?.id;
 
-    for (const { name, icon, type, order, parent } of lines) {
-      if (systemId(name, type) !== undefined) continue;
+      for (const { name, icon, type, order, parent } of lines) {
+        if (systemId(name, type) !== undefined) continue;
 
-      const parentId = parent === undefined ? null : (systemId(parent, type) ?? null);
-      const system = tx
-        .insert(categories)
-        .values({ userId: null, parentId, name, icon, type, order })
-        .returning({ id: categories.id })
-        .get();
-      created++;
+        const parentId = parent === undefined ? null : (systemId(parent, type) ?? null);
+        const system = tx
+          .insert(categories)
+          .values({ userId: null, parentId, name, icon, type, order })
+          .returning({ id: categories.id })
+          .get();
+        created++;
 
-      const copies = tx
-        .select({ id: categories.id })
-        .from(categories)
-        .where(
-          and(isNotNull(categories.userId), eq(categories.name, name), eq(categories.type, type)),
-        )
-        .all()
-        .map((row) => row.id);
-      if (copies.length === 0) continue;
+        const copies = tx
+          .select({ id: categories.id })
+          .from(categories)
+          .where(
+            and(isNotNull(categories.userId), eq(categories.name, name), eq(categories.type, type)),
+          )
+          .all()
+          .map((row) => row.id);
+        if (copies.length === 0) continue;
 
-      tx.update(transactions)
-        .set({ categoryId: system.id })
-        .where(inArray(transactions.categoryId, copies))
-        .run();
-      tx.update(categoryRules)
-        .set({ categoryId: system.id })
-        .where(inArray(categoryRules.categoryId, copies))
-        .run();
-      tx.delete(categories).where(inArray(categories.id, copies)).run();
-    }
-    return created;
-  });
+        tx.update(transactions)
+          .set({ categoryId: system.id })
+          .where(inArray(transactions.categoryId, copies))
+          .run();
+        tx.update(categoryRules)
+          .set({ categoryId: system.id })
+          .where(inArray(categoryRules.categoryId, copies))
+          .run();
+        tx.delete(categories).where(inArray(categories.id, copies)).run();
+      }
+      return created;
+    },
+    { behavior: "immediate" },
+  );
 }
