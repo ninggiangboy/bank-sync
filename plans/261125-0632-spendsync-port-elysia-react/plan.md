@@ -35,7 +35,7 @@ Analysis (source anatomy, dependency matrix, decision matrix, risk score): [xia 
 | 4 | [Email ingest, DKIM, job queue, scheduler, CLI](./phase-04-mail-sync-queue.md) | Done |
 | 5 | [Auth, profile and user settings](./phase-05-auth-settings.md) | Done |
 | 6 | [Domain API](./phase-06-domain-api.md) | Done |
-| 7 | [Frontend shell](./phase-07-frontend-shell.md) | Pending |
+| 7 | [Frontend shell](./phase-07-frontend-shell.md) | Done |
 | 8 | [Frontend pages](./phase-08-frontend-pages.md) | Pending |
 | 9 | [PWA, production build and docs](./phase-09-pwa-production-docs.md) | Pending |
 | 10 | [Test parity and CI](./phase-10-test-parity-ci.md) | Pending |

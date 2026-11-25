@@ -1,7 +1,7 @@
 ---
 phase: 7
 title: "Frontend shell"
-status: pending
+status: done
 priority: P1
 effort: "8h"
 dependencies: [1]
@@ -50,3 +50,17 @@ Build the React SPA foundation: routing with typed search params, data fetching 
 ## Risks
 
 - Tailwind 4 drops the JS config; the remap must be done with `@theme` variables. Mitigation: keep one token file and verify a few representative classes (`bg-slate-50`, `text-emerald-700`, `ring-amber-200`) resolve to the source hex values in both themes.
+
+## Handover notes (implementation)
+
+- Entry: `src/main.tsx` fetches `GET /api/public/config` and `GET /api/settings` before the first render, sets the display time zone (`timeZone`, now part of the public config) and applies locale and theme, then mounts the router with `context: { queryClient }`. `index.html` reads the `theme` and `locale` cookies before paint.
+- Layouts live in `src/layouts/` (`AppLayout` with `requireSession`, `GuestLayout`), not in `routes/`: TanStack Router rejects a pathless layout route with no children (both collapse to `/`). Phase 8 adds `routes/_app.tsx` (`beforeLoad: requireSession, component: AppLayout`) and `routes/_guest.tsx` (`component: GuestLayout`) together with their first child page.
+- Shared components that point at page routes (`Navigation`, `AuthTabs`, `Brand`, toast links) use `AppLink` (SPA navigation by URL), because typed `<Link to>` only accepts routes that exist. Switch to `<Link>` once the pages are in place if wanted.
+- Search params: `lib/search.ts` holds the zod schemas (`listSearch`, `scopeSearch`, `monthSearch`); pass them to `validateSearch`. `all` is the default filter and stays out of the URL.
+- Queries: `lib/queries.ts` has `sessionQuery`, `settingsQuery`, `configQuery` and `invalidateData(queryClient)`, which marks every data query stale after a mutation (everything except session, settings and config). Add page query factories next to them. Queries are stale at once (`staleTime: 0`), so a page restored through back/forward refetches.
+- Errors: `unwrap(edenCall)` and `authCall(betterAuthCall)` throw `ApiError { status, code, fields, seconds }`. `lib/messages.ts` turns codes into sentences (`errorMessage`, `fieldErrors(error, { field: { attribute, max?, min? } })`, `requireFields`). A `403 demo_read_only` from any query or mutation shows the 8-second read-only notice with "Exit demo mode"; only `401 unauthenticated` ends the session (Better Auth's wrong-password answer is also a 401).
+- Toasts: `showToast(message, { tone, link })` replaces Laravel's session flash; a toast with a link stays 8 s instead of 4 s.
+- i18n: keys are the English source strings with `{{name}}` placeholders. All 299 upstream `vi.json` keys are ported (SpendSync renamed to Bank Sync), plus the auth, password and validation lines and the server error codes. `en.json` is empty because English falls back to the key. Keys for features dropped with IMAP (app password, sync) are still there; phase 8 can delete the ones no page uses. Rich text such as the rule sentence needs `<Trans>` with an `em` component.
+- Password reset: Better Auth redirects to `<redirectTo>?token=…` (or `?error=INVALID_TOKEN`), so the reset page reads `token` from the search, not from a `/reset-password/:token` path segment.
+- Keyboard: links with `data-keyboard="numeric"` open the mobile keyboard during the tap; the next page's field should use React's `autoFocus`.
+- The upstream Zalo QR code in "Supported banks" is replaced by a link to `APP_SOURCE_URL`; it was the upstream author's personal contact.
