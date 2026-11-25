@@ -1,0 +1,12 @@
+{
+  "direction": "out",
+  "amount": 5500000,
+  "counterparty": "LE THI HOA",
+  "counterparty_account": null,
+  "description": "TIEN NHA THANG 11",
+  "reference": null,
+  "occurred_at": "2026-11-09T20:15:00+07:00",
+  "currency": null,
+  "original_amount": null,
+  "amount_estimated": false
+}

@@ -1,0 +1,12 @@
+{
+  "direction": "out",
+  "amount": 387000,
+  "counterparty": "QUAN AN NHAT",
+  "counterparty_account": "0451000555666",
+  "description": "MBVCB.16700000005.QR Pay.Thanh toan cho 16700000005 0400000004 tu tai khoan 0071000123456.NGUYEN VAN AN",
+  "reference": "16700000005",
+  "occurred_at": "2026-10-25T20:54:00+07:00",
+  "currency": null,
+  "original_amount": null,
+  "amount_estimated": false
+}

@@ -1,0 +1,12 @@
+{
+  "direction": "out",
+  "amount": 100000,
+  "counterparty": "CONG AN THANH PHO DA NANG",
+  "counterparty_account": "1130000003",
+  "description": "TT HS DVC G01.000.000-260821-00001",
+  "reference": "15800000003",
+  "occurred_at": "2026-09-01T08:12:00+07:00",
+  "currency": null,
+  "original_amount": null,
+  "amount_estimated": false
+}

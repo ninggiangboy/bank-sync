@@ -1,0 +1,12 @@
+{
+  "direction": "out",
+  "amount": 28000,
+  "counterparty": "PAYOO Aeon Mall Binh Tan",
+  "counterparty_account": "316QR2ABCDEP9A00001",
+  "description": "QR2ABCDE Aeon Mall Binh Tan QR2ABCDETT Aeon Mall Binh Tan",
+  "reference": "FT26316000000001/VPB2611120000000001",
+  "occurred_at": "2026-11-12T20:13:13+07:00",
+  "currency": null,
+  "original_amount": null,
+  "amount_estimated": false
+}

@@ -1,0 +1,12 @@
+{
+  "direction": "out",
+  "amount": 15000000,
+  "counterparty": "LE VAN CUONG",
+  "counterparty_account": "0451000555666",
+  "description": null,
+  "reference": "FT26319000000003/VPB2611150000000003",
+  "occurred_at": "2026-11-15T18:30:02+07:00",
+  "currency": null,
+  "original_amount": null,
+  "amount_estimated": false
+}

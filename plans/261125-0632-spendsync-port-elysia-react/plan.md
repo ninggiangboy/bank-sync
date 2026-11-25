@@ -31,7 +31,7 @@ Analysis (source anatomy, dependency matrix, decision matrix, risk score): [xia 
 |---|-------|--------|
 | 1 | [Workspace scaffold](./phase-01-workspace-scaffold.md) | Done |
 | 2 | [Database schema and seed](./phase-02-database-schema.md) | Done |
-| 3 | [Parsing engine with fixture parity](./phase-03-parsing-engine.md) | Pending |
+| 3 | [Parsing engine with fixture parity](./phase-03-parsing-engine.md) | Done |
 | 4 | [Email ingest, DKIM, job queue, scheduler, CLI](./phase-04-mail-sync-queue.md) | Pending |
 | 5 | [Auth, profile and user settings](./phase-05-auth-settings.md) | Pending |
 | 6 | [Domain API](./phase-06-domain-api.md) | Pending |

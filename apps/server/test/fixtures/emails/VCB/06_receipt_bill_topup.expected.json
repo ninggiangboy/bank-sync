@@ -1,0 +1,12 @@
+{
+  "direction": "out",
+  "amount": 100000,
+  "counterparty": null,
+  "counterparty_account": "0451000999888",
+  "description": "MBVCB.16500000001.TOPUP Viettel 0900000001 100000",
+  "reference": "16500000001",
+  "occurred_at": "2026-10-15T15:16:00+07:00",
+  "currency": null,
+  "original_amount": null,
+  "amount_estimated": false
+}

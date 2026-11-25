@@ -22,6 +22,7 @@ const schema = z.object({
   APP_LOCALE: z.enum(["vi", "en"]).default("vi"),
   APP_SOURCE_URL: z.url().optional(),
   DATABASE_PATH: z.string().min(1).default("storage/bank-sync.sqlite"),
+  STORAGE_PATH: z.string().min(1).default("storage"),
   PORT: positiveInt(8000),
 
   // Outgoing mail for verification and password reset. An empty host logs mail instead.

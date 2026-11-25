@@ -1,0 +1,12 @@
+{
+  "direction": "out",
+  "amount": 1250000,
+  "counterparty": "TRAN THI BICH",
+  "counterparty_account": "19036000003",
+  "description": "NGUYEN VAN AN chuyen tien nha thang 11",
+  "reference": "FT26318000000002/VPB2611140000000002",
+  "occurred_at": "2026-11-14T09:05:41+07:00",
+  "currency": null,
+  "original_amount": null,
+  "amount_estimated": false
+}

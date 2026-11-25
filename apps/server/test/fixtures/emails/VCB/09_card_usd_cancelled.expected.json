@@ -1,0 +1,12 @@
+{
+  "direction": "in",
+  "amount": 577720,
+  "counterparty": "ANTHROPIC* CLAUDE SUB +14152360599 US",
+  "counterparty_account": null,
+  "description": null,
+  "reference": null,
+  "occurred_at": "2026-11-11T10:14:22+07:00",
+  "currency": "USD",
+  "original_amount": 2222,
+  "amount_estimated": true
+}

@@ -1,0 +1,12 @@
+{
+  "direction": "out",
+  "amount": 2000,
+  "counterparty": "NGUYEN VAN AN",
+  "counterparty_account": "01700000002",
+  "description": "Chuyen khoan tu Cake",
+  "reference": "528000002",
+  "occurred_at": "2026-11-16T12:21:38+07:00",
+  "currency": null,
+  "original_amount": null,
+  "amount_estimated": false
+}

@@ -1,7 +1,7 @@
 ---
 phase: 3
 title: "Parsing engine with fixture parity"
-status: pending
+status: done
 priority: P1
 effort: "8h"
 dependencies: [1]

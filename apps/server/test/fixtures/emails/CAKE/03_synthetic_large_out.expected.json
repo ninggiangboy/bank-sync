@@ -1,0 +1,12 @@
+{
+  "direction": "out",
+  "amount": 1250000,
+  "counterparty": "TRAN THI BICH",
+  "counterparty_account": "19036000003",
+  "description": "Tien nha thang 11",
+  "reference": "528000003",
+  "occurred_at": "2026-11-18T08:05:10+07:00",
+  "currency": null,
+  "original_amount": null,
+  "amount_estimated": false
+}
