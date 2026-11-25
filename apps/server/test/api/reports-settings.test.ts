@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { env } from "../../src/config/env";
 import { categories } from "../../src/db/schema";
 import { monthlyReport } from "../../src/domain/reports";
 import { createApiApp } from "./helpers";
@@ -218,6 +219,7 @@ describe("public config", () => {
       "VPB",
     ]);
     expect(typeof body.sourceUrl).toBe("string");
+    expect(body.timeZone).toBe(env.APP_TIMEZONE);
   });
 });
 
