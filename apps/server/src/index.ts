@@ -18,7 +18,7 @@ if (env.SCHEDULER_ENABLED) app.use(scheduler(db, files));
 const worker = createWorker({ db, handlers: createJobHandlers({ db, files }) });
 if (env.WORKER_ENABLED) worker.start();
 
-app.listen({ port: env.PORT, maxRequestBodySize: env.UPLOAD_MAX_BYTES + 1024 * 1024 });
+app.listen({ port: env.PORT, maxRequestBodySize: env.UPLOAD_MAX_BYTES + 2 * 1024 * 1024 });
 
 console.info(`${env.APP_NAME} API listening on http://localhost:${env.PORT}/api`);
 

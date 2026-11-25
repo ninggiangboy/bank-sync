@@ -25,7 +25,11 @@ export function refreshDemo(
   db: Db,
   { now = Date.now(), timeZone = env.APP_TIMEZONE, email = env.DEMO_USER_EMAIL } = {},
 ): { days: number; moved: number } {
-  const demo = db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
+  const demo = db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, email.toLowerCase()))
+    .get();
   if (!demo) return { days: 0, moved: 0 };
 
   const newest = db

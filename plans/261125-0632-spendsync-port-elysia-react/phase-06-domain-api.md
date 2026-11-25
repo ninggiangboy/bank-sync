@@ -1,7 +1,7 @@
 ---
 phase: 6
 title: "Domain API"
-status: pending
+status: done
 priority: P1
 effort: "10h"
 dependencies: [3, 4, 5]
