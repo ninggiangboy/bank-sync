@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "dev": "bun run --parallel dev:server dev:web",
-    "dev:server": "bun --watch apps/server/src/index.ts",
+    "dev:server": "NODE_ENV=development bun --watch apps/server/src/index.ts",
     "dev:web": "bun run --filter @bank-sync/web dev",
     "build": "bun run --filter @bank-sync/web build",
     "start": "bun apps/server/src/index.ts",
