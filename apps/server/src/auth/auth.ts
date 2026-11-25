@@ -1,19 +1,9 @@
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { env } from "../config/env";
 import { db } from "../db";
-import * as schema from "../db/schema";
+import { createMailer } from "../mail/mailer";
+import { createAuth } from "./create-auth";
 
-export const auth = betterAuth({
-  appName: env.APP_NAME,
-  baseURL: env.APP_URL,
-  basePath: "/api/auth",
-  secret: env.BETTER_AUTH_SECRET,
-  database: drizzleAdapter(db, { provider: "sqlite", schema }),
-  emailAndPassword: { enabled: true },
-  user: {
-    additionalFields: {
-      viewingDemo: { type: "boolean", required: true, defaultValue: false, input: false },
-    },
-  },
-});
+/**
+ * The configured instance for tooling only (`auth generate` reads this file). The server builds its
+ * own through `createApp`, so importing the app never opens the real database.
+ */
+export const auth = createAuth({ db, mailer: createMailer() });

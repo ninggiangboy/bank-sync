@@ -9,6 +9,7 @@ import { createInboxFiles } from "./inbound/inbox-files";
 const app = createApp({
   db: createTestDb(),
   files: createInboxFiles(mkdtempSync(join(tmpdir(), "inbox-"))),
+  mailer: { send: async () => {} },
 });
 
 test("GET /api/up reports healthy", async () => {

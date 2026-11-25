@@ -5,13 +5,14 @@ import { db } from "./db";
 import { migrateDatabase } from "./db/migrate";
 import { createInboxFiles } from "./inbound/inbox-files";
 import { createJobHandlers } from "./jobs";
+import { createMailer } from "./mail/mailer";
 import { createWorker } from "./queue/worker";
 import { scheduler } from "./scheduler";
 
 migrateDatabase(db);
 
 const files = createInboxFiles(join(env.STORAGE_PATH, "inbound"));
-const app = createApp({ db, files });
+const app = createApp({ db, files, mailer: createMailer() });
 if (env.SCHEDULER_ENABLED) app.use(scheduler(db, files));
 
 const worker = createWorker({ db, handlers: createJobHandlers({ db, files }) });

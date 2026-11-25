@@ -1,7 +1,7 @@
 ---
 phase: 5
 title: "Auth, profile and user settings"
-status: pending
+status: done
 priority: P1
 effort: "8h"
 dependencies: [2]
@@ -51,3 +51,11 @@ Provide the Breeze-equivalent account flows with Better Auth on Elysia, plus pro
 - Password policy differs from Laravel defaults. Mitigation: set min length 8 explicitly and test it.
 - Dev origin mismatch. The SPA runs on `http://localhost:5173` and proxies `/api`, but `.env.example` sets `APP_URL=http://localhost:8000`. Better Auth's origin check will reject browser POSTs, and email links will point at a port with no SPA. Set `trustedOrigins` for the Vite origin in development, or make the dev `APP_URL` the Vite origin.
 - Regenerate the auth tables with `NODE_ENV=development bunx --bun auth@<pinned> generate --config apps/server/src/auth/auth.ts --output apps/server/src/db/auth-schema.ts --yes`, then `bun run db:generate`. `--bun` is needed because the config imports `bun:sqlite`.
+
+## Handover notes (implementation)
+
+- `createApp({ db, files, mailer })` builds Better Auth itself (`auth/create-auth.ts`); `auth/auth.ts` exports a separate instance only for `auth generate`. Routes declare `{ auth: true }` and receive `{ user, session }`; demo-owned accounts get `403 demo_read_only` on every profile mutation.
+- Auth endpoints keep Better Auth's own error bodies (`{ code, message }`, e.g. `INVALID_EMAIL_OR_PASSWORD` for both a wrong password and an unknown email). Our routes use `{ error: { code, fields } }` with field codes `required`, `max`, `min`, `confirmed`, `current_password`, `invalid`. Login throttle: `429 { error: { code: "auth.throttle", seconds } }` after 5 failures per email and socket address per minute (`cache` table); Better Auth's 3-per-10-seconds sign-in rule is switched off, its limiter is off under test, and the origin check is enabled explicitly so tests cover it.
+- Password reset: `POST /api/auth/request-password-reset { email, redirectTo }` then `POST /api/auth/reset-password { newPassword, token }`; the emailed link goes through `/api/auth/reset-password/<token>?callbackURL=…`. Verification: `GET /api/auth/verify-email?token&callbackURL`.
+- Set `APP_URL` to the Vite origin in development (see `.env.example`); `trustedOrigins` also lists `http://localhost:5173` when `NODE_ENV=development`.
+- The `locale` and `theme` cookies are not `HttpOnly` so the first paint can read them.
