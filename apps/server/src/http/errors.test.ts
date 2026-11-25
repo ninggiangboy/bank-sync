@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ApiErrorBody } from "@bank-sync/shared";
-import { Elysia } from "elysia";
+import { Elysia, status } from "elysia";
 import { z } from "zod";
 import { errorHandler, HttpError } from "./errors";
 
@@ -9,6 +9,12 @@ const build = (development: boolean) =>
     .use(errorHandler({ development }))
     .get("/forbidden", () => {
       throw new HttpError(403, "demo_read_only");
+    })
+    .get("/unauthorized", () => {
+      throw status(401, "unauthorized");
+    })
+    .get("/bad-response", () => ({ total: "oops" }) as unknown as { total: number }, {
+      response: z.object({ total: z.number() }),
     })
     .get("/boom", () => {
       throw new Error("database exploded");
@@ -26,6 +32,22 @@ describe("errorHandler", () => {
   test("maps HttpError to its status and code", async () => {
     const res = await call(build(false), "/forbidden");
     expect(res).toEqual({ status: 403, body: { error: { code: "demo_read_only" } } });
+  });
+
+  test("maps a thrown status response to its status and message code", async () => {
+    const res = await call(build(false), "/unauthorized");
+    expect(res).toEqual({ status: 401, body: { error: { code: "unauthorized" } } });
+  });
+
+  test("treats a response that fails its schema as a server error", async () => {
+    const original = console.error;
+    console.error = () => {};
+    try {
+      const res = await call(build(false), "/bad-response");
+      expect(res).toEqual({ status: 500, body: { error: { code: "server_error" } } });
+    } finally {
+      console.error = original;
+    }
   });
 
   test("returns 404 JSON for unknown routes", async () => {

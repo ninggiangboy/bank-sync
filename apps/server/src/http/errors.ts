@@ -1,5 +1,5 @@
 import type { ApiErrorBody } from "@bank-sync/shared";
-import { Elysia } from "elysia";
+import { Elysia, ElysiaCustomStatusResponse } from "elysia";
 
 /** An expected failure with a stable error code that clients can translate. */
 export class HttpError extends Error {
@@ -26,24 +26,34 @@ function fieldsOf(issues: ValidationIssue[]): Record<string, string[]> {
   return fields;
 }
 
-const reply = (status: number, error: ApiErrorBody["error"]) =>
-  Response.json({ error } satisfies ApiErrorBody, { status });
-
 /**
  * Turns every thrown error into `{ error: { code, fields? } }` JSON.
- * Unexpected errors are logged and, outside development, never expose a message or stack.
+ * Unexpected errors, including responses that fail their own schema, are logged and,
+ * outside development, never expose a message or stack.
  * Handlers return a plain Response so error bodies do not leak into route success types.
  */
 export const errorHandler = (options: { development: boolean }) =>
-  new Elysia({ name: "error-handler" }).onError({ as: "global" }, ({ code, error }) => {
+  new Elysia({ name: "error-handler" }).onError({ as: "global" }, ({ code, error, set }) => {
+    const reply = (status: number, body: ApiErrorBody["error"]) => {
+      set.status = status;
+      return Response.json({ error: body } satisfies ApiErrorBody, { status });
+    };
+
     if (error instanceof HttpError) {
       return reply(
         error.status,
         error.fields ? { code: error.code, fields: error.fields } : { code: error.code },
       );
     }
+    // `throw status(401, "unauthorized")`: the message becomes the error code.
+    if (error instanceof ElysiaCustomStatusResponse) {
+      const status = Number(error.code);
+      const message = error.response;
+      return reply(status, { code: typeof message === "string" ? message : `http_${status}` });
+    }
     switch (code) {
       case "VALIDATION":
+        if (error.type === "response") break;
         return reply(422, {
           code: "validation_failed",
           fields: fieldsOf(error.all as ValidationIssue[]),
