@@ -129,6 +129,20 @@ describe("login", () => {
     ).toHaveLength(0);
   });
 
+  test("parallel wrong guesses cannot get around the limit", async () => {
+    const { register, browser } = createAuthApp();
+    await register("me@example.com");
+    const guesses = await Promise.all(
+      Array.from({ length: 20 }, () =>
+        browser().json("/api/auth/sign-in/email", {
+          json: { email: "me@example.com", password: "wrong-wrong" },
+        }),
+      ),
+    );
+    expect(guesses.filter((r) => r.status === 401)).toHaveLength(LOGIN_MAX_ATTEMPTS);
+    expect(guesses.filter((r) => r.status === 429)).toHaveLength(20 - LOGIN_MAX_ATTEMPTS);
+  });
+
   test("signing out clears the demo-viewing flag", async () => {
     const { register, db } = createAuthApp();
     const me = await register();
@@ -195,6 +209,37 @@ describe("password reset", () => {
       headers: { cookie: "locale=en" },
     });
     expect(mails[0]?.subject).toContain("Reset your password");
+  });
+});
+
+describe("built-in endpoints that skip our guards", () => {
+  test("are not reachable", async () => {
+    const { register, db } = createAuthApp();
+    const me = await register();
+    for (const path of [
+      "/delete-user",
+      "/delete-user/callback",
+      "/update-user",
+      "/change-password",
+      "/change-email",
+      "/send-verification-email",
+    ]) {
+      const res = await me.json(`/api/auth${path}`, {
+        json: { password: PASSWORD, name: "x", newPassword: "abcdefgh", currentPassword: PASSWORD },
+      });
+      expect([path, res.status]).toEqual([path, 404]);
+    }
+    expect(db.select().from(user).where(eq(user.id, me.id)).get()?.name).toBe("Test User");
+  });
+});
+
+describe("cookies", () => {
+  test("a malformed cookie is ignored", async () => {
+    const { browser } = createAuthApp();
+    const res = await browser().json("/api/settings", {
+      headers: { cookie: "locale=%; theme=%E0%A4%A" },
+    });
+    expect(res).toMatchObject({ status: 200, body: { locale: "vi", theme: "system" } });
   });
 });
 

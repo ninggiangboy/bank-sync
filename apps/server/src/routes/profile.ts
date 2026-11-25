@@ -101,7 +101,11 @@ export const profileRoutes = ({
         const input = validate(changePasswordSchema, body);
         await requirePassword(user.id, input.currentPassword, "currentPassword");
         await auth.api.changePassword({
-          body: { currentPassword: input.currentPassword, newPassword: input.newPassword },
+          body: {
+            currentPassword: input.currentPassword,
+            newPassword: input.newPassword,
+            revokeOtherSessions: true,
+          },
           headers: request.headers,
         });
         return { status: "updated" as const };

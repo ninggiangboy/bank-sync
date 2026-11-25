@@ -24,6 +24,21 @@ export function signInbound(secret: string, timestamp: string, body: Uint8Array)
   return createHmac("sha256", secret).update(`${timestamp}.${bodyHash}`).digest("hex");
 }
 
+/** Reads the request body, giving up as soon as it passes the cap. */
+async function readCapped(request: Request, max: number): Promise<Uint8Array | null> {
+  if (Number(request.headers.get("content-length")) > max) return null;
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  if (request.body) {
+    for await (const chunk of request.body as unknown as AsyncIterable<Uint8Array>) {
+      size += chunk.byteLength;
+      if (size > max) return null;
+      chunks.push(chunk);
+    }
+  }
+  return new Uint8Array(Buffer.concat(chunks));
+}
+
 function signatureMatches(expected: string, given: string): boolean {
   const a = Buffer.from(expected);
   const b = Buffer.from(given);
@@ -44,18 +59,17 @@ export const inboundRoutes = ({
 }: InboundRouteDeps) =>
   new Elysia({ prefix: "/inbound" }).post(
     "/email",
-    ({ request, body }) => {
-      const bytes = new Uint8Array(body as ArrayBuffer);
-      if (bytes.byteLength > maxBytes) throw status(413, "payload_too_large");
-
+    async ({ request }) => {
+      // Cheap checks first, so an unauthenticated caller cannot make the server buffer a large body.
       const timestamp = request.headers.get("x-inbound-timestamp") ?? "";
       const signature = request.headers.get("x-inbound-signature") ?? "";
       const age = Math.abs(now() / 1000 - Number(timestamp));
-      if (
-        !/^\d+$/.test(timestamp) ||
-        age > MAX_CLOCK_SKEW_SECONDS ||
-        !signatureMatches(signInbound(secret, timestamp, bytes), signature)
-      ) {
+      if (!/^\d+$/.test(timestamp) || age > MAX_CLOCK_SKEW_SECONDS || signature === "") {
+        throw status(401, "unauthorized");
+      }
+      const bytes = await readCapped(request, maxBytes);
+      if (!bytes) throw status(413, "payload_too_large");
+      if (!signatureMatches(signInbound(secret, timestamp, bytes), signature)) {
         throw status(401, "unauthorized");
       }
 
@@ -94,5 +108,5 @@ export const inboundRoutes = ({
       });
       return { status: "accepted" as const };
     },
-    { parse: "arrayBuffer" },
+    { parse: "none" },
   );

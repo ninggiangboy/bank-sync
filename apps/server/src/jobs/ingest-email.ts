@@ -27,6 +27,7 @@ const KEPT_CONFIRMATIONS = 5;
 export async function ingestEmail(
   { db, files, resolver }: IngestDeps,
   { file, inboundAddressId }: IngestEmailPayload,
+  meta: { attempt: number; maxAttempts: number } = { attempt: 1, maxAttempts: 1 },
 ): Promise<void> {
   const raw = files.read(file);
   if (!raw) return;
@@ -44,7 +45,12 @@ export async function ingestEmail(
   const message = await fromEml(raw);
 
   if (message.from === GMAIL_FORWARDING_SENDER) {
-    const confirmation = parseGmailConfirmation(message);
+    // Only mail Google itself signed is trusted; anyone can write this From address.
+    const signed = await verifyDkim(raw, resolver ? { resolver } : {});
+    if (signed.temporaryFailure && meta.attempt < meta.maxAttempts) {
+      throw new Error("DKIM lookup failed temporarily");
+    }
+    const confirmation = signed.pass ? parseGmailConfirmation(message) : null;
     if (confirmation) saveConfirmation(db, address, confirmation, message.receivedAt);
     files.remove(file);
     return;
@@ -57,7 +63,10 @@ export async function ingestEmail(
   }
 
   const dkim = await verifyDkim(raw, resolver ? { resolver } : {});
-  if (dkim.temporaryFailure) throw new Error("DKIM lookup failed temporarily");
+  // On the last attempt a lookup that still fails stores the mail as unverified instead of losing it.
+  if (dkim.temporaryFailure && meta.attempt < meta.maxAttempts) {
+    throw new Error("DKIM lookup failed temporarily");
+  }
 
   storeEmail(db, {
     userId: address.userId,

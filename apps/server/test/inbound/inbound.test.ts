@@ -107,6 +107,13 @@ describe("inbound webhook", () => {
     expect(await res.json()).toEqual({ error: { code: "unknown_address" } });
   });
 
+  test("a request without a valid timestamp or signature is refused before the body is read", async () => {
+    const { post } = setup();
+    const big = new Uint8Array(1024 * 1024 + 1);
+    expect((await post(big, { timestamp: "abc" })).status).toBe(401);
+    expect((await post(big, { signature: "" })).status).toBe(401);
+  });
+
   test("a body over the size cap is rejected", async () => {
     const { post } = setup();
     const body = new Uint8Array(1024 * 1024 + 1);
@@ -202,7 +209,8 @@ describe("ingest pipeline", () => {
   });
 
   test("a Gmail confirmation saves the code and a Google link, and ignores other links", async () => {
-    const { post, db, worker } = setup();
+    const key = createDkimKey("google.com");
+    const { post, db, worker } = setup(key.resolver);
     const mail = [
       "From: Gmail Team <forwarding-noreply@google.com>",
       "Subject: Gmail Forwarding Confirmation - Receive Mail from owner@gmail.com",
@@ -219,7 +227,7 @@ describe("ingest pipeline", () => {
       "https://mail-settings.google.com/mail/vf-%5BANGjdJ%5D-abc?x=1&y=2",
       "",
     ].join("\r\n");
-    await post(new TextEncoder().encode(mail));
+    await post(await key.sign(new TextEncoder().encode(mail)));
     await worker.drain();
 
     const [saved] = db.select().from(forwardingConfirmations).all();
@@ -232,7 +240,8 @@ describe("ingest pipeline", () => {
   });
 
   test("a confirmation whose only link is not Google's saves nothing", async () => {
-    const { post, db, worker } = setup();
+    const key = createDkimKey("google.com");
+    const { post, db, worker } = setup(key.resolver);
     const mail = [
       "From: forwarding-noreply@google.com",
       "Subject: Gmail Forwarding Confirmation - Receive Mail from owner@gmail.com",
@@ -241,13 +250,14 @@ describe("ingest pipeline", () => {
       "Confirmation code: 123456789",
       "https://evil.example/mail-settings.google.com/x",
     ].join("\r\n");
-    await post(new TextEncoder().encode(mail));
+    await post(await key.sign(new TextEncoder().encode(mail)));
     await worker.drain();
     expect(db.select({ n: count() }).from(forwardingConfirmations).get()?.n).toBe(0);
   });
 
   test("only the five newest confirmations are kept", async () => {
-    const { post, db, worker } = setup();
+    const key = createDkimKey("google.com");
+    const { post, db, worker } = setup(key.resolver);
     for (let i = 1; i <= 7; i++) {
       const mail = [
         "From: forwarding-noreply@google.com",
@@ -258,7 +268,7 @@ describe("ingest pipeline", () => {
         `Confirmation code: 11111111${i}`,
         "https://mail.google.com/mail/vf-abc",
       ].join("\r\n");
-      await post(new TextEncoder().encode(mail));
+      await post(await key.sign(new TextEncoder().encode(mail)));
     }
     await worker.drain();
     const codes = db
@@ -268,6 +278,38 @@ describe("ingest pipeline", () => {
       .map((row) => row.code)
       .sort();
     expect(codes).toEqual(["111111113", "111111114", "111111115", "111111116", "111111117"]);
+  });
+
+  test("an unsigned or wrongly signed Gmail confirmation is dropped", async () => {
+    const key = createDkimKey("evil.example");
+    const { post, db, worker } = setup(key.resolver);
+    const mail = new TextEncoder().encode(
+      [
+        "From: forwarding-noreply@google.com",
+        "Subject: Gmail Forwarding Confirmation - Receive Mail from owner@gmail.com",
+        "Message-ID: <fake@google.com>",
+        "",
+        "Confirmation code: 123456789",
+        "https://mail.google.com/mail/vf-abc",
+      ].join("\r\n"),
+    );
+    await post(mail);
+    await post(await key.sign(mail));
+    await worker.drain();
+    expect(db.select({ n: count() }).from(forwardingConfirmations).get()?.n).toBe(0);
+  });
+
+  test("a DNS failure is retried, and on the last attempt the email is stored unverified", async () => {
+    const down = async () => {
+      throw Object.assign(new Error("timeout"), { code: "ETIMEOUT" });
+    };
+    const { post, db, worker } = setup(down);
+    await post(await createDkimKey("info.vietcombank.com.vn").sign(fixture("VCB/02_salary_in")));
+    for (let i = 0; i < 4; i++) await worker.runOnce();
+    expect(db.select({ n: count() }).from(rawEmails).get()?.n).toBe(0);
+    expect(db.select().from(jobs).get()).toMatchObject({ attempts: 4, failedAt: null });
+    await worker.runOnce();
+    expect(db.select().from(rawEmails).get()?.verification).toBe("unverified");
   });
 
   test("the pending file is removed after handling", async () => {

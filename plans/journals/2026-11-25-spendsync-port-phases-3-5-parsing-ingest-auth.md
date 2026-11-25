@@ -27,6 +27,6 @@ Gotchas:
 
 ## Next steps
 
-Phase 6 (domain API). Still needed from the user: one real forwarded email per bank to confirm DKIM survives Gmail forwarding, and checks of Cloudflare Worker failure behavior, subdomain routing and Gmail filter import. An independent security review of the inbound and auth code was started; its findings are not yet applied.
+Phase 6 (domain API). Still needed from the user: one real forwarded email per bank to confirm DKIM survives Gmail forwarding, and checks of Cloudflare Worker failure behavior, subdomain routing and Gmail filter import. An independent review then found and confirmed, and these were fixed: Better Auth's own `/delete-user`, `/update-user` and `/change-password` bypassed the password and demo guards (now answer 404); parallel sign-in guesses escaped the throttle (attempts are now counted before the password check); Gmail confirmation mail was not DKIM-checked; a long DNS outage lost bank mail (the last attempt now stores it unverified); the inbound endpoint buffered large unsigned bodies; a malformed cookie caused 500s; sessions now end on password change or reset; a crash-looping job now fails. Open: adding the recipient to the HMAC changes the agreed signature format, so it needs the user's decision.
 
 > Historical work record — not durable authority. Prefer docs/specs/ADRs for current decisions.

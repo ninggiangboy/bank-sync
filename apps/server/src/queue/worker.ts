@@ -2,7 +2,8 @@ import { and, asc, eq, isNull, lte, or } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { jobs } from "../db/schema";
 
-export type JobHandler = (payload: never) => void | Promise<void>;
+export type JobMeta = { attempt: number; maxAttempts: number };
+export type JobHandler = (payload: never, meta: JobMeta) => void | Promise<void>;
 export type JobHandlers = Record<string, JobHandler>;
 
 export type WorkerOptions = {
@@ -82,7 +83,8 @@ export function createWorker(options: WorkerOptions) {
     const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     const exhausted = job.attempts >= job.maxAttempts;
     log("Job failed", { job: job.name, jobId: job.id, attempts: job.attempts, exhausted });
-    db.update(jobs)
+    const update = db
+      .update(jobs)
       .set(
         exhausted
           ? { failedAt: new Date(), reservedAt: null, lastError: message }
@@ -92,14 +94,28 @@ export function createWorker(options: WorkerOptions) {
               availableAt: new Date(Date.now() + backoffMs(job.attempts)),
             },
       )
-      .where(eq(jobs.id, job.id))
-      .run();
+      .where(eq(jobs.id, job.id));
+    try {
+      update.run();
+    } catch {
+      // A newer job with the same unique key is already pending; it supersedes this one.
+      db.delete(jobs).where(eq(jobs.id, job.id)).run();
+    }
   }
 
   /** Runs the next due job. Returns false when there was nothing to do. */
   async function runOnce(): Promise<boolean> {
     const job = claim();
     if (!job) return false;
+
+    // A reservation left by a crashed run counts as an attempt; stop a job that keeps crashing.
+    if (job.attempts > job.maxAttempts) {
+      fail(
+        { ...job, attempts: job.maxAttempts },
+        new Error("Job kept failing before it could finish"),
+      );
+      return true;
+    }
 
     const handler = handlers[job.name];
     if (!handler) {
@@ -110,7 +126,9 @@ export function createWorker(options: WorkerOptions) {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([
-        Promise.resolve().then(() => handler(job.payload as never)),
+        Promise.resolve().then(() =>
+          handler(job.payload as never, { attempt: job.attempts, maxAttempts: job.maxAttempts }),
+        ),
         new Promise<never>((_, reject) => {
           timer = setTimeout(() => reject(new Error("Job timed out")), timeoutMs);
         }),

@@ -5,6 +5,16 @@ import type { Auth } from "./create-auth";
 export const LOGIN_MAX_ATTEMPTS = 5;
 export const LOGIN_DECAY_SECONDS = 60;
 
+/** Better Auth endpoints that would bypass our own guarded routes (password check, demo guard, validation). */
+const BLOCKED_PATHS = new Set([
+  "/api/auth/delete-user",
+  "/api/auth/delete-user/callback",
+  "/api/auth/update-user",
+  "/api/auth/change-password",
+  "/api/auth/change-email",
+  "/api/auth/send-verification-email",
+]);
+
 type Kv = ReturnType<typeof createKvCache>;
 
 /**
@@ -17,8 +27,9 @@ export const authPlugin = ({ auth, kv }: { auth: Auth; kv: Kv }) =>
     .all(
       "/auth/*",
       async ({ request, server }) => {
-        const isSignIn =
-          request.method === "POST" && new URL(request.url).pathname === "/api/auth/sign-in/email";
+        const pathname = new URL(request.url).pathname;
+        if (BLOCKED_PATHS.has(pathname)) throw status(404, "not_found");
+        const isSignIn = request.method === "POST" && pathname === "/api/auth/sign-in/email";
         if (!isSignIn) return auth.handler(request);
 
         const body = (await request
@@ -28,7 +39,8 @@ export const authPlugin = ({ auth, kv }: { auth: Auth; kv: Kv }) =>
         const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
         const key = `login:${email}|${server?.requestIP(request)?.address ?? "unknown"}`;
 
-        if (kv.tooManyAttempts(key, LOGIN_MAX_ATTEMPTS)) {
+        // Count first: parallel guesses each take a slot before the password is checked.
+        if (kv.hit(key, LOGIN_DECAY_SECONDS) > LOGIN_MAX_ATTEMPTS) {
           const seconds = kv.availableIn(key);
           return Response.json(
             { error: { code: "auth.throttle", seconds } },
@@ -37,7 +49,6 @@ export const authPlugin = ({ auth, kv }: { auth: Auth; kv: Kv }) =>
         }
         const response = await auth.handler(request);
         if (response.ok) kv.clear(key);
-        else kv.hit(key, LOGIN_DECAY_SECONDS);
         return response;
       },
       { parse: "none" },

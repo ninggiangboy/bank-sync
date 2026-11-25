@@ -62,6 +62,7 @@ export function createAuth({ db, mailer }: AuthDeps) {
       requireEmailVerification: false,
       autoSignIn: true,
       resetPasswordTokenExpiresIn: 60 * 60,
+      revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }, request) => {
         await mail(resetPassword, user, url, request);
       },
