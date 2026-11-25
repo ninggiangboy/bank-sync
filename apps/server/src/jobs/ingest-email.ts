@@ -50,7 +50,8 @@ export async function ingestEmail(
     if (signed.temporaryFailure && meta.attempt < meta.maxAttempts) {
       throw new Error("DKIM lookup failed temporarily");
     }
-    const confirmation = signed.pass ? parseGmailConfirmation(message) : null;
+    const confirmation =
+      signed.pass && signed.from === message.from ? parseGmailConfirmation(message) : null;
     if (confirmation) saveConfirmation(db, address, confirmation, message.receivedAt);
     files.remove(file);
     return;
@@ -68,12 +69,15 @@ export async function ingestEmail(
     throw new Error("DKIM lookup failed temporarily");
   }
 
+  // Both parsers must agree on who the sender is, or the signature proves nothing about it.
+  const verified = dkim.pass && dkim.from === message.from;
+
   storeEmail(db, {
     userId: address.userId,
     inboundAddressId: address.id,
     source: "forward",
-    verification: dkim.pass ? "dkim_pass" : "unverified",
-    dkimDomain: dkim.domain ?? null,
+    verification: verified ? "dkim_pass" : "unverified",
+    dkimDomain: verified ? (dkim.domain ?? null) : null,
     message,
   });
   files.remove(file);
@@ -96,6 +100,7 @@ function saveConfirmation(
           confirmUrl: confirmation.confirmUrl,
           receivedAt,
         })
+        .onConflictDoNothing()
         .run();
       const keep = tx
         .select({ id: forwardingConfirmations.id })

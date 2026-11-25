@@ -4,6 +4,8 @@ export type DkimOutcome = {
   pass: boolean;
   /** The signing domain (`d=`) that proved the origin. */
   domain?: string;
+  /** The From address the signature was checked against. */
+  from?: string;
   /** DNS or similar trouble: the answer may differ if asked again. */
   temporaryFailure?: boolean;
 };
@@ -42,7 +44,8 @@ export async function verifyDkim(
       !signature.canonBodyLengthLimited ||
       (signature.canonBodyLengthLimit ?? 0) >=
         (signature.canonBodyLengthTotal ?? Number.MAX_SAFE_INTEGER);
-    if (aligned && coversBody) return { pass: true, domain: signer };
+    if (aligned && coversBody)
+      return { pass: true, domain: signer, from: result.headerFrom[0]?.toLowerCase() as string };
   }
   return temporaryFailure ? { pass: false, temporaryFailure: true } : { pass: false };
 }

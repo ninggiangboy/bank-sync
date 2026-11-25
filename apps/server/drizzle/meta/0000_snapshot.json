@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "be7f035a-82e1-432c-8895-454a44435970",
+  "id": "f44e21d4-4bbc-4c38-937a-0f2881726a8c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "cache": {
@@ -335,6 +335,14 @@
             "inbound_address_id"
           ],
           "isUnique": false
+        },
+        "forwarding_confirmations_user_code_unique": {
+          "name": "forwarding_confirmations_user_code_unique",
+          "columns": [
+            "user_id",
+            "code"
+          ],
+          "isUnique": true
         }
       },
       "foreignKeys": {

@@ -49,6 +49,7 @@ CREATE TABLE `forwarding_confirmations` (
 --> statement-breakpoint
 CREATE INDEX `forwarding_confirmations_user_received_index` ON `forwarding_confirmations` (`user_id`,`received_at`);--> statement-breakpoint
 CREATE INDEX `forwarding_confirmations_inbound_address_index` ON `forwarding_confirmations` (`inbound_address_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `forwarding_confirmations_user_code_unique` ON `forwarding_confirmations` (`user_id`,`code`);--> statement-breakpoint
 CREATE TABLE `inbound_addresses` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`user_id` text NOT NULL,

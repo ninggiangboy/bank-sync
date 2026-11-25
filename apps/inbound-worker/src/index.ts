@@ -30,7 +30,12 @@ const address = (value: string | null) =>
 const toHex = (bytes: ArrayBuffer) =>
   [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 
-async function sign(secret: string, timestamp: string, body: Uint8Array): Promise<string> {
+async function sign(
+  secret: string,
+  timestamp: string,
+  recipient: string,
+  body: Uint8Array,
+): Promise<string> {
   const bodyHash = toHex(await crypto.subtle.digest("SHA-256", body));
   const key = await crypto.subtle.importKey(
     "raw",
@@ -42,7 +47,7 @@ async function sign(secret: string, timestamp: string, body: Uint8Array): Promis
   const mac = await crypto.subtle.sign(
     "HMAC",
     key,
-    new TextEncoder().encode(`${timestamp}.${bodyHash}`),
+    new TextEncoder().encode(`${timestamp}.${recipient.trim().toLowerCase()}.${bodyHash}`),
   );
   return toHex(mac);
 }
@@ -96,7 +101,7 @@ export async function handleEmail(
     headers: {
       "content-type": "message/rfc822",
       "x-inbound-timestamp": timestamp,
-      "x-inbound-signature": await sign(env.INBOUND_WEBHOOK_SECRET, timestamp, body),
+      "x-inbound-signature": await sign(env.INBOUND_WEBHOOK_SECRET, timestamp, message.to, body),
       "x-inbound-recipient": message.to,
     },
     body,

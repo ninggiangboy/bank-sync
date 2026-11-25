@@ -88,6 +88,8 @@ export const forwardingConfirmations = sqliteTable(
   (t) => [
     index("forwarding_confirmations_user_received_index").on(t.userId, t.receivedAt),
     index("forwarding_confirmations_inbound_address_index").on(t.inboundAddressId),
+    // A job that overlaps its own retry must not save the same code twice.
+    unique("forwarding_confirmations_user_code_unique").on(t.userId, t.code),
   ],
 );
 

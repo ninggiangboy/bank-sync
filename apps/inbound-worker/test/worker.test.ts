@@ -53,13 +53,13 @@ describe("inbound worker", () => {
     expect(headers["x-inbound-recipient"]).toBe("abc@in.example.com");
     expect(headers["x-inbound-timestamp"]).toBe(timestamp);
     expect(headers["x-inbound-signature"]).toBe(
-      signInbound(ENV.INBOUND_WEBHOOK_SECRET, timestamp, raw),
+      signInbound(ENV.INBOUND_WEBHOOK_SECRET, timestamp, "abc@in.example.com", raw),
     );
     // The same signature, computed from the documented formula.
     const bodyHash = createHash("sha256").update(raw).digest("hex");
     expect(headers["x-inbound-signature"]).toBe(
       createHmac("sha256", ENV.INBOUND_WEBHOOK_SECRET)
-        .update(`${timestamp}.${bodyHash}`)
+        .update(`${timestamp}.abc@in.example.com.${bodyHash}`)
         .digest("hex"),
     );
     expect(new Uint8Array(init.body as Uint8Array)).toEqual(raw);

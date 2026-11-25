@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { count, eq } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { forwardingConfirmations, jobs, rawEmails, transactions } from "../../src/db/schema";
-import { rotateAddress } from "../../src/domain/inbound-addresses";
+import { createTestUser } from "../../src/db/test-db";
+import { getOrCreateActiveAddress, rotateAddress } from "../../src/domain/inbound-addresses";
 import { errorHandler } from "../../src/http/errors";
 import { inboundRoutes, signInbound } from "../../src/inbound/route";
 import { allTransactions, createDkimKey, createPipeline, fixture } from "../helpers";
@@ -35,14 +36,23 @@ function setup(resolver?: Parameters<typeof createPipeline>[0]) {
         headers: {
           "content-type": "message/rfc822",
           "x-inbound-timestamp": timestamp,
-          "x-inbound-signature": overrides.signature ?? signInbound(SECRET, timestamp, body),
+          "x-inbound-signature":
+            overrides.signature ??
+            signInbound(
+              SECRET,
+              timestamp,
+              overrides.recipient ?? `${pipeline.address.token}@${DOMAIN}`,
+              body,
+            ),
           "x-inbound-recipient": overrides.recipient ?? `${pipeline.address.token}@${DOMAIN}`,
         },
         body,
       }),
     );
   };
-  return { ...pipeline, post };
+  const sign = (timestamp: string, body: Uint8Array, secret = SECRET) =>
+    signInbound(secret, timestamp, `${pipeline.address.token}@${DOMAIN}`, body);
+  return { ...pipeline, post, sign };
 }
 
 const pendingJobs = (db: ReturnType<typeof setup>["db"]) =>
@@ -58,29 +68,41 @@ describe("inbound webhook", () => {
   });
 
   test("a signature made with another secret is rejected", async () => {
-    const { post } = setup();
+    const { post, sign } = setup();
     const body = fixture("VCB/02_salary_in");
     const timestamp = String(Math.floor(NOW / 1000));
-    const res = await post(body, { signature: signInbound("y".repeat(40), timestamp, body) });
+    const res = await post(body, { signature: sign(timestamp, body, "y".repeat(40)) });
     expect(res.status).toBe(401);
   });
 
+  test("a captured request replayed to another address is refused", async () => {
+    const { post, sign, db, userId } = setup();
+    const other = createTestUser(db);
+    const second = getOrCreateActiveAddress(db, other);
+    const body = fixture("VCB/02_salary_in");
+    const timestamp = String(Math.floor(NOW / 1000));
+    const res = await post(body, {
+      recipient: `${second.token}@${DOMAIN}`,
+      signature: sign(timestamp, body),
+    });
+    expect(res.status).toBe(401);
+    expect(userId).not.toBe(other);
+    expect(pendingJobs(db)).toBe(0);
+  });
+
   test("a timestamp 301 seconds old is rejected, 300 is accepted", async () => {
-    const { post } = setup();
+    const { post, sign } = setup();
     const body = fixture("VCB/02_salary_in");
     const at = (offset: number) => String(Math.floor(NOW / 1000) - offset);
+    expect((await post(body, { timestamp: at(301), signature: sign(at(301), body) })).status).toBe(
+      401,
+    );
     expect(
-      (await post(body, { timestamp: at(301), signature: signInbound(SECRET, at(301), body) }))
-        .status,
+      (await post(body, { timestamp: at(-301), signature: sign(at(-301), body) })).status,
     ).toBe(401);
-    expect(
-      (await post(body, { timestamp: at(-301), signature: signInbound(SECRET, at(-301), body) }))
-        .status,
-    ).toBe(401);
-    expect(
-      (await post(body, { timestamp: at(300), signature: signInbound(SECRET, at(300), body) }))
-        .status,
-    ).toBe(200);
+    expect((await post(body, { timestamp: at(300), signature: sign(at(300), body) })).status).toBe(
+      200,
+    );
   });
 
   test("the same body twice is a no-op the second time", async () => {

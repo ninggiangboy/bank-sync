@@ -18,10 +18,21 @@ export type InboundRouteDeps = {
   now?: () => number;
 };
 
-/** Hex HMAC-SHA256 of `timestamp + "." + sha256(body)`, the value of `X-Inbound-Signature`. */
-export function signInbound(secret: string, timestamp: string, body: Uint8Array): string {
+/**
+ * Hex HMAC-SHA256 of `timestamp + "." + recipient + "." + sha256(body)`, the value of
+ * `X-Inbound-Signature`. The recipient is part of it so a captured request cannot be replayed to
+ * another address. It is lowercased and trimmed, as both sides read it.
+ */
+export function signInbound(
+  secret: string,
+  timestamp: string,
+  recipient: string,
+  body: Uint8Array,
+): string {
   const bodyHash = createHash("sha256").update(body).digest("hex");
-  return createHmac("sha256", secret).update(`${timestamp}.${bodyHash}`).digest("hex");
+  return createHmac("sha256", secret)
+    .update(`${timestamp}.${recipient.trim().toLowerCase()}.${bodyHash}`)
+    .digest("hex");
 }
 
 /** Reads the request body, giving up as soon as it passes the cap. */
@@ -69,11 +80,11 @@ export const inboundRoutes = ({
       }
       const bytes = await readCapped(request, maxBytes);
       if (!bytes) throw status(413, "payload_too_large");
-      if (!signatureMatches(signInbound(secret, timestamp, bytes), signature)) {
+      const recipient = (request.headers.get("x-inbound-recipient") ?? "").trim().toLowerCase();
+      if (!signatureMatches(signInbound(secret, timestamp, recipient, bytes), signature)) {
         throw status(401, "unauthorized");
       }
 
-      const recipient = (request.headers.get("x-inbound-recipient") ?? "").trim().toLowerCase();
       const at = recipient.lastIndexOf("@");
       const address =
         at > 0 && recipient.slice(at + 1) === domain.toLowerCase()
