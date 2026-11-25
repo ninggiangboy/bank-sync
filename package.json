@@ -16,7 +16,10 @@
     "test": "bun test",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "biome check .",
-    "format": "biome check --write ."
+    "format": "biome check --write .",
+    "db:generate": "bun run --filter @bank-sync/server db:generate",
+    "db:migrate": "bun apps/server/src/db/migrate.ts",
+    "db:seed": "bun apps/server/src/db/seed/index.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.9",
