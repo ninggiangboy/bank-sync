@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.sqlite
+*.sqlite-*
+.env
+.env.*
+!.env.example
+storage/
+.upstream/
+.wrangler/
+*.tsbuildinfo
+.tanstack/
+test-results/
+playwright-report/
