@@ -26,36 +26,37 @@ function fieldsOf(issues: ValidationIssue[]): Record<string, string[]> {
   return fields;
 }
 
-const body = (code: string, fields?: Record<string, string[]>): ApiErrorBody => ({
-  error: fields ? { code, fields } : { code },
-});
+const reply = (status: number, error: ApiErrorBody["error"]) =>
+  Response.json({ error } satisfies ApiErrorBody, { status });
 
 /**
  * Turns every thrown error into `{ error: { code, fields? } }` JSON.
  * Unexpected errors are logged and, outside development, never expose a message or stack.
+ * Handlers return a plain Response so error bodies do not leak into route success types.
  */
 export const errorHandler = (options: { development: boolean }) =>
-  new Elysia({ name: "error-handler" }).onError({ as: "global" }, ({ code, error, set }) => {
+  new Elysia({ name: "error-handler" }).onError({ as: "global" }, ({ code, error }) => {
     if (error instanceof HttpError) {
-      set.status = error.status;
-      return body(error.code, error.fields);
+      return reply(
+        error.status,
+        error.fields ? { code: error.code, fields: error.fields } : { code: error.code },
+      );
     }
     switch (code) {
       case "VALIDATION":
-        set.status = 422;
-        return body("validation_failed", fieldsOf(error.all as ValidationIssue[]));
+        return reply(422, {
+          code: "validation_failed",
+          fields: fieldsOf(error.all as ValidationIssue[]),
+        });
       case "PARSE":
-        set.status = 400;
-        return body("invalid_body");
+        return reply(400, { code: "invalid_body" });
       case "NOT_FOUND":
-        set.status = 404;
-        return body("not_found");
+        return reply(404, { code: "not_found" });
     }
     console.error(error);
-    set.status = 500;
-    const response: ApiErrorBody = body("server_error");
-    if (options.development && error instanceof Error) {
-      response.error.debug = { message: error.message, stack: error.stack };
-    }
-    return response;
+    const debug =
+      options.development && error instanceof Error
+        ? { message: error.message, stack: error.stack }
+        : undefined;
+    return reply(500, debug ? { code: "server_error", debug } : { code: "server_error" });
   });
