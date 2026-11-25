@@ -81,6 +81,43 @@ describe("schema constraints", () => {
     expect(() => db.insert(transactions).values(row).run()).toThrow(/UNIQUE/);
   });
 
+  test("transaction amounts cannot be negative", async () => {
+    const db = createTestDb();
+    const userId = createTestUser(db);
+    const row = {
+      userId,
+      bankCode: "manual",
+      direction: "out" as const,
+      amount: 1000,
+      occurredAt: new Date(),
+    };
+    expect(() =>
+      db
+        .insert(transactions)
+        .values({ ...row, amount: -1 })
+        .run(),
+    ).toThrow(/CHECK/);
+    expect(() =>
+      db
+        .insert(transactions)
+        .values({ ...row, originalAmount: -5 })
+        .run(),
+    ).toThrow(/CHECK/);
+    db.insert(transactions)
+      .values({ ...row, amount: 0, originalAmount: null })
+      .run();
+    expect(await db.$count(transactions)).toBe(1);
+  });
+
+  test("timestamps default in SQL for inserts made outside Drizzle", () => {
+    const db = createTestDb();
+    const before = Date.now();
+    db.$client.exec("INSERT INTO categories (name) VALUES ('Raw')");
+    const row = db.select().from(categories).get();
+    expect(row?.createdAt.getTime()).toBeGreaterThanOrEqual(before - 1000);
+    expect(row?.updatedAt.getTime()).toBeLessThanOrEqual(Date.now() + 1000);
+  });
+
   test("category rules are unique per user, field and value", async () => {
     const db = createTestDb();
     const userId = createTestUser(db);

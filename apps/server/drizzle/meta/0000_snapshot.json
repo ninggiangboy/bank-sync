@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ad7ea0ac-6ce0-4ab3-bb87-031335d1f7f0",
+  "id": "d4b6418a-2aa3-4784-b21b-5f47ae136eba",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "cache": {
@@ -102,17 +102,34 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         },
         "updated_at": {
           "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "categories_user_index": {
+          "name": "categories_user_index",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "categories_parent_index": {
+          "name": "categories_parent_index",
+          "columns": [
+            "parent_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "categories_user_id_user_id_fk": {
           "name": "categories_user_id_user_id_fk",
@@ -188,17 +205,26 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         },
         "updated_at": {
           "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         }
       },
       "indexes": {
+        "category_rules_category_index": {
+          "name": "category_rules_category_index",
+          "columns": [
+            "category_id"
+          ],
+          "isUnique": false
+        },
         "category_rules_user_field_value_unique": {
           "name": "category_rules_user_field_value_unique",
           "columns": [
@@ -302,6 +328,13 @@
             "received_at"
           ],
           "isUnique": false
+        },
+        "forwarding_confirmations_inbound_address_index": {
+          "name": "forwarding_confirmations_inbound_address_index",
+          "columns": [
+            "inbound_address_id"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -365,7 +398,8 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         },
         "replaced_at": {
           "name": "replaced_at",
@@ -382,6 +416,13 @@
             "token"
           ],
           "isUnique": true
+        },
+        "inbound_addresses_user_index": {
+          "name": "inbound_addresses_user_index",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
         },
         "inbound_addresses_active_user_unique": {
           "name": "inbound_addresses_active_user_unique",
@@ -557,14 +598,16 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         },
         "updated_at": {
           "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         }
       },
       "indexes": {
@@ -572,6 +615,13 @@
           "name": "raw_emails_bank_code_index",
           "columns": [
             "bank_code"
+          ],
+          "isUnique": false
+        },
+        "raw_emails_inbound_address_index": {
+          "name": "raw_emails_inbound_address_index",
+          "columns": [
+            "inbound_address_id"
           ],
           "isUnique": false
         },
@@ -752,14 +802,16 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         },
         "updated_at": {
           "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         }
       },
       "indexes": {
@@ -775,6 +827,13 @@
           "columns": [
             "user_id",
             "occurred_at"
+          ],
+          "isUnique": false
+        },
+        "transactions_category_index": {
+          "name": "transactions_category_index",
+          "columns": [
+            "category_id"
           ],
           "isUnique": false
         }
@@ -822,7 +881,16 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "transactions_amount_not_negative": {
+          "name": "transactions_amount_not_negative",
+          "value": "\"transactions\".\"amount\" >= 0"
+        },
+        "transactions_original_amount_not_negative": {
+          "name": "transactions_original_amount_not_negative",
+          "value": "\"transactions\".\"original_amount\" is null or \"transactions\".\"original_amount\" >= 0"
+        }
+      }
     },
     "user_settings": {
       "name": "user_settings",
@@ -862,14 +930,16 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         },
         "updated_at": {
           "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         }
       },
       "indexes": {

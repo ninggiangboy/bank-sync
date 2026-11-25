@@ -10,6 +10,7 @@ import {
 import { relations, sql } from "drizzle-orm";
 import {
   type AnySQLiteColumn,
+  check,
   index,
   integer,
   sqliteTable,
@@ -21,16 +22,20 @@ import { user } from "./auth-schema";
 
 export * from "./auth-schema";
 
-// Timestamps are integer milliseconds since the epoch, in UTC.
+// Timestamps are integer milliseconds since the epoch, in UTC. The SQL default covers inserts
+// made outside Drizzle (migrations, the sqlite3 shell); Drizzle inserts use the JS default.
 const timestamp = (name: string) => integer(name, { mode: "timestamp_ms" });
+const nowMs = sql`(cast(unixepoch('subsec') * 1000 as integer))`;
 const createdAt = () =>
   timestamp("created_at")
     .notNull()
+    .default(nowMs)
     .$defaultFn(() => new Date());
 const timestamps = () => ({
   createdAt: createdAt(),
   updatedAt: timestamp("updated_at")
     .notNull()
+    .default(nowMs)
     .$defaultFn(() => new Date())
     .$onUpdateFn(() => new Date()),
 });
@@ -59,6 +64,7 @@ export const inboundAddresses = sqliteTable(
     replacedAt: timestamp("replaced_at"),
   },
   (t) => [
+    index("inbound_addresses_user_index").on(t.userId),
     uniqueIndex("inbound_addresses_active_user_unique")
       .on(t.userId)
       .where(sql`"replaced_at" is null`),
@@ -79,7 +85,10 @@ export const forwardingConfirmations = sqliteTable(
     confirmUrl: text("confirm_url").notNull(),
     receivedAt: timestamp("received_at").notNull(),
   },
-  (t) => [index("forwarding_confirmations_user_received_index").on(t.userId, t.receivedAt)],
+  (t) => [
+    index("forwarding_confirmations_user_received_index").on(t.userId, t.receivedAt),
+    index("forwarding_confirmations_inbound_address_index").on(t.inboundAddressId),
+  ],
 );
 
 export const rawEmails = sqliteTable(
@@ -107,22 +116,30 @@ export const rawEmails = sqliteTable(
   (t) => [
     unique("raw_emails_user_message_unique").on(t.userId, t.messageId),
     index("raw_emails_bank_code_index").on(t.bankCode),
+    index("raw_emails_inbound_address_index").on(t.inboundAddressId),
   ],
 );
 
 /** System categories have no owner (`user_id` NULL) and are shared by everyone. */
-export const categories = sqliteTable("categories", {
-  id: id(),
-  userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
-  parentId: integer("parent_id").references((): AnySQLiteColumn => categories.id, {
-    onDelete: "set null",
-  }),
-  name: text("name").notNull(),
-  icon: text("icon", { length: 16 }),
-  type: text("type", { enum: CATEGORY_TYPES }).notNull().default("expense"),
-  order: integer("order").notNull().default(0),
-  ...timestamps(),
-});
+export const categories = sqliteTable(
+  "categories",
+  {
+    id: id(),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    parentId: integer("parent_id").references((): AnySQLiteColumn => categories.id, {
+      onDelete: "set null",
+    }),
+    name: text("name").notNull(),
+    icon: text("icon", { length: 16 }),
+    type: text("type", { enum: CATEGORY_TYPES }).notNull().default("expense"),
+    order: integer("order").notNull().default(0),
+    ...timestamps(),
+  },
+  (t) => [
+    index("categories_user_index").on(t.userId),
+    index("categories_parent_index").on(t.parentId),
+  ],
+);
 
 export const transactions = sqliteTable(
   "transactions",
@@ -151,7 +168,16 @@ export const transactions = sqliteTable(
     deletedAt: timestamp("deleted_at"),
     ...timestamps(),
   },
-  (t) => [index("transactions_user_occurred_index").on(t.userId, t.occurredAt)],
+  (t) => [
+    index("transactions_user_occurred_index").on(t.userId, t.occurredAt),
+    index("transactions_category_index").on(t.categoryId),
+    // The sign lives in `direction`; a negative amount would invert totals.
+    check("transactions_amount_not_negative", sql`${t.amount} >= 0`),
+    check(
+      "transactions_original_amount_not_negative",
+      sql`${t.originalAmount} is null or ${t.originalAmount} >= 0`,
+    ),
+  ],
 );
 
 /** `match_value` is stored folded (lowercase, no diacritics) so matching is accent-insensitive. */
@@ -169,6 +195,7 @@ export const categoryRules = sqliteTable(
   },
   (t) => [
     unique("category_rules_user_field_value_unique").on(t.userId, t.matchField, t.matchValue),
+    index("category_rules_category_index").on(t.categoryId),
   ],
 );
 
